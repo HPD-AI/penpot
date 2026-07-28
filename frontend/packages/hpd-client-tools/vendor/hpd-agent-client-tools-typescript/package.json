@@ -1,0 +1,20 @@
+{
+  "name": "@hpd-research/hpd-agent-client-tools-typescript",
+  "version": "0.1.0-hpdos.1",
+  "private": true,
+  "description": "Vendored HPD-Agent client-tool provider source for the Penpot HPDOS integration",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "license": "FSL-1.1-ALv2",
+  "dependencies": {
+    "@hpd-research/hpd-agent-client": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

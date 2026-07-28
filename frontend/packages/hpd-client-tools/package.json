@@ -1,0 +1,24 @@
+{
+  "name": "@penpot/hpd-client-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "hpd-native-test": "./src/native-test-shim.js",
+      "import": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@hpd-research/hpd-agent-client-tools-typescript": "workspace:*"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2",
+    "vitest": "4.1.9"
+  }
+}

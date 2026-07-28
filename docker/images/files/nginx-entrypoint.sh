@@ -34,6 +34,11 @@ update_flags() {
   if [ -n "$PENPOT_PUBLIC_URI" ]; then
       echo "var penpotPublicURI = \"$PENPOT_PUBLIC_URI\";" >> "$1";
   fi
+
+  if [ "$PENPOT_HPD_CLIENT_TOOLS_DEVELOPMENT" = "1" ] &&
+     [ -n "$PENPOT_HPD_CLIENT_TOOLS_URI" ]; then
+      echo "var penpotHpdClientToolsURI = \"$PENPOT_HPD_CLIENT_TOOLS_URI\";" >> "$1";
+  fi
 }
 
 update_oidc_name() {

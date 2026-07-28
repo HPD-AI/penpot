@@ -186,6 +186,16 @@
   (or (some-> (obj/get global "penpotMcpServerURI") u/uri)
       (u/join public-uri "mcp/ws")))
 
+(def hpd-client-tools-uri
+  (some-> (obj/get global "penpotHpdClientToolsURI") str))
+
+(defn hpd-client-tools-launch-attached?
+  []
+  (and (exists? js/document)
+       (some? (.querySelector
+               js/document
+               "meta[name='hpdos-client-tools-attachment'][content='v1']"))))
+
 (def rasterizer-uri
   (or (some-> (obj/get global "penpotRasterizerURI") normalize-uri)
       public-uri))

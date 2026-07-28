@@ -23,7 +23,11 @@ for (const step of BUILD_STEPS) {
 progress("Running tests...");
 const result = spawnSync(
   "node",
-  ["target/tests/test.js", ...process.argv.slice(2)],
+  [
+    "--conditions=hpd-native-test",
+    "target/tests/test.js",
+    ...process.argv.slice(2),
+  ],
   { stdio: "inherit" },
 );
 process.exit(result.status ?? 1);

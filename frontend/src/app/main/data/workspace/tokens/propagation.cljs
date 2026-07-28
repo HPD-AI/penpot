@@ -183,8 +183,8 @@
             (let [elapsed (tpoint)]
               (l/inf :status "END" :hint "propagate-tokens" :elapsed elapsed)))))))
 
-(defn propagate-workspace-tokens
-  []
+(defn- propagate-workspace-tokens*
+  [{:keys [token-names on-complete on-error]}]
   (ptk/reify ::propagate-workspace-tokens
     ptk/WatchEvent
     (watch [_ state _]
@@ -197,7 +197,10 @@
                (sd/resolve-tokens tokens-tree))
              (rx/mapcat
               (fn [sd-tokens]
-                (let [undo-id (js/Symbol)]
+                (let [undo-id   (js/Symbol)
+                      sd-tokens (cond-> sd-tokens
+                                  (seq token-names)
+                                  (select-keys token-names))]
                   (rx/concat
                    (rx/of (dwu/start-undo-transaction undo-id :timeout false))
 
@@ -211,4 +214,24 @@
                                     (rx/of (dwsh/update-shapes-buffer-stop))
                                     (rx/throw %))))
                    (rx/of (dwsh/update-shapes-buffer-stop))
-                   (rx/of (dwu/commit-undo-transaction undo-id)))))))))))
+                   (rx/of (dwu/commit-undo-transaction undo-id))))))
+             (rx/catch
+              (fn [error]
+                (when (fn? on-error)
+                  (on-error error))
+                (rx/throw error)))
+             (rx/finalize
+              (fn [_]
+                (when (fn? on-complete)
+                  (on-complete)))))))))
+
+(defn propagate-workspace-tokens
+  []
+  (propagate-workspace-tokens* nil))
+
+(defn propagate-selected-workspace-tokens
+  [token-names on-complete on-error]
+  (propagate-workspace-tokens*
+   {:token-names token-names
+    :on-complete on-complete
+    :on-error on-error}))

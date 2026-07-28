@@ -102,6 +102,9 @@
     [:flags {:optional true} [::sm/set :string]]
     [:admins {:optional true} [::sm/set ::sm/email]]
     [:secret-key {:optional true} :string]
+    [:secret-key-file {:optional true} :string]
+    [:public-uri-file {:optional true} :string]
+    [:database-password-file {:optional true} :string]
 
     [:tenant {:optional false} :string]
     [:public-uri {:optional false} ::sm/uri]
@@ -320,13 +323,92 @@
 (def explain-config
   (sm/explainer schema:config))
 
+(defn- read-bounded-config-file
+  [path hint max-size]
+  (let [path (fs/path path)]
+    (when (or (not (.isAbsolute path))
+              (not (fs/regular-file? path))
+              (java.nio.file.Files/isSymbolicLink path)
+              (> (fs/size path) max-size))
+      (ex/raise :type :validation
+                :code :invalid-config-file
+                :hint hint))
+    (let [value (-> path slurp str/trim)]
+      (when (str/blank? value)
+        (ex/raise :type :validation
+                  :code :empty-config-file
+                  :hint hint))
+      value)))
+
+(defn- resolve-file-backed-value
+  [config value-key file-key hint max-size]
+  (if-let [path (c/get config file-key)]
+    (-> config
+        (assoc value-key
+               (read-bounded-config-file path hint max-size))
+        (dissoc file-key))
+    config))
+
+(defn- prepare-file-backed-config
+  [default environment]
+  (when (and (:secret-key environment)
+             (:secret-key-file environment))
+    (ex/raise :type :validation
+              :code :conflicting-secret-key-sources
+              :hint "PENPOT_SECRET_KEY and PENPOT_SECRET_KEY_FILE cannot both be set"))
+  (when (and (:public-uri environment)
+             (:public-uri-file environment))
+    (ex/raise :type :validation
+              :code :conflicting-public-uri-sources
+              :hint "PENPOT_PUBLIC_URI and PENPOT_PUBLIC_URI_FILE cannot both be set"))
+  (when (and (:database-password environment)
+             (:database-password-file environment))
+    (ex/raise :type :validation
+              :code :conflicting-database-password-sources
+              :hint "PENPOT_DATABASE_PASSWORD and PENPOT_DATABASE_PASSWORD_FILE cannot both be set"))
+  (cond-> (merge default environment)
+    (:public-uri-file environment) (dissoc :public-uri)
+    (:database-password-file environment)
+    (dissoc :database-password)))
+
+(defn- resolve-secret-key-file
+  [config]
+  (resolve-file-backed-value
+   config
+   :secret-key
+   :secret-key-file
+   "PENPOT_SECRET_KEY_FILE must name a small, absolute, regular, non-symlink file"
+   1024))
+
+(defn- resolve-public-uri-file
+  [config]
+  (resolve-file-backed-value
+   config
+   :public-uri
+   :public-uri-file
+   "PENPOT_PUBLIC_URI_FILE must name a small, absolute, regular, non-symlink file"
+   4096))
+
+(defn- resolve-database-password-file
+  [config]
+  (resolve-file-backed-value
+   config
+   :database-password
+   :database-password-file
+   "PENPOT_DATABASE_PASSWORD_FILE must name a small, absolute, regular, non-symlink file"
+   1024))
+
 (defn read-config
   "Reads the configuration from environment variables and decodes all
   known values."
   [& {:keys [prefix default] :or {prefix "penpot"}}]
-  (->> (read-env prefix)
-       (merge default)
-       (decode-config)))
+  (-> (prepare-file-backed-config
+       default
+       (read-env prefix))
+      (resolve-secret-key-file)
+      (resolve-public-uri-file)
+      (resolve-database-password-file)
+      (decode-config)))
 
 (def version
   (v/parse (or (some-> (io/resource "version.txt")

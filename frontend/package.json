@@ -36,6 +36,7 @@
     "build:test": "pnpm run build:wasm && clojure -M:dev:shadow-cljs compile test",
     "test": "pnpm run build:test && node target/tests/test.js",
     "test:quiet": "node ./scripts/test-quiet.js",
+    "hpd:compat": "node ./scripts/hpd-upstream-compatibility.js",
     "test:storybook": "vitest run --project=storybook",
     "watch:test": "mkdir -p target/tests && concurrently \"clojure -M:dev:shadow-cljs watch test\" \"nodemon -C -d 2 -w target/tests --exec 'node target/tests/test.js'\"",
     "test:e2e": "playwright test --project default",
@@ -52,6 +53,8 @@
   },
   "devDependencies": {
     "@penpot/draft-js": "link:packages/draft-js",
+    "@penpot/hpd-client-tools": "link:packages/hpd-client-tools",
+    "json5": "^2.2.3",
     "@penpot/mousetrap": "link:packages/mousetrap",
     "@penpot/plugins-runtime": "link:../plugins/libs/plugins-runtime",
     "@penpot/svgo": "penpot/svgo#3.3.0",

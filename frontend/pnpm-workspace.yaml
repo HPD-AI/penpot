@@ -1,5 +1,8 @@
 packages:
   - "packages/draft-js"
+  - "packages/hpd-client-tools"
+  - "packages/hpd-client-tools/vendor/hpd-agent-client"
+  - "packages/hpd-client-tools/vendor/hpd-agent-client-tools-typescript"
   - "packages/mousetrap"
   - "packages/tokenscript"
   - "text-editor"

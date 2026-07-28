@@ -1,0 +1,2 @@
+hpd-agent-client/src/*.ts -text whitespace=-trailing-space
+hpd-agent-client/src/**/*.ts -text whitespace=-trailing-space

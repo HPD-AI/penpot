@@ -1,0 +1,99 @@
+name: HPDOS Penpot Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      gh_ref:
+        description: Exact Penpot fork ref to build and publish
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-images:
+    uses: ./.github/workflows/build-docker.yml
+    with:
+      gh_ref: ${{ inputs.gh_ref }}
+    secrets: inherit
+
+  record-provenance:
+    name: Resolve immutable image manifests
+    needs: build-images
+    runs-on: penpot-runner-02
+
+    steps:
+      - name: Isolate Docker credentials
+        run: |
+          echo "DOCKER_CONFIG=${{ runner.temp }}/.docker-${{ github.run_id }}-${{ github.job }}" >> "$GITHUB_ENV"
+
+      - name: Checkout exact fork ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.gh_ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Penpot registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.PUB_DOCKER_USERNAME }}
+          password: ${{ secrets.PUB_DOCKER_PASSWORD }}
+
+      - name: Resolve the published bundle version
+        env:
+          FILE_NAME: penpot-${{ inputs.gh_ref }}.zip
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          bundle_version="$(aws s3api head-object \
+            --bucket ${{ secrets.S3_BUCKET }} \
+            --key "${FILE_NAME}" \
+            --query 'Metadata."bundle-version"' \
+            --output text)"
+          test -n "${bundle_version}"
+          printf 'BUNDLE_VERSION=%s\n' "${bundle_version}" >> "$GITHUB_ENV"
+
+      - name: Record immutable HPDOS image provenance
+        env:
+          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          IMAGE_TAG: ${{ inputs.gh_ref }}
+          SOURCE_REPOSITORY: https://github.com/${{ github.repository }}
+          BUILD_WORKFLOW: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p hpdos-artifacts
+          for image in frontend backend exporter; do
+            reference="${REGISTRY}/${image}:${IMAGE_TAG}"
+            digest="sha256:$(docker buildx imagetools inspect --raw "${reference}" | sha256sum | cut -d' ' -f1)"
+            printf '%s=%s@%s\n' "${image}" "${REGISTRY}/${image}" "${digest}" >> hpdos-artifacts/images.env
+          done
+          for image in "postgres=postgres:15" "valkey=valkey/valkey:8.1"; do
+            name="${image%%=*}"
+            reference="${image#*=}"
+            digest="sha256:$(docker buildx imagetools inspect --raw "${reference}" | sha256sum | cut -d' ' -f1)"
+            printf '%s=%s@%s\n' "${name}" "${reference%%:*}" "${digest}" >> hpdos-artifacts/images.env
+          done
+          node docker/images/create-hpdos-image-provenance.mjs \
+            hpdos-artifacts/images.env \
+            hpdos-artifacts/image-provenance.json
+
+      - name: Upload immutable provenance
+        uses: actions/upload-artifact@v6
+        with:
+          name: penpot-hpdos-image-provenance-${{ github.run_id }}
+          path: hpdos-artifacts/image-provenance.json
+          if-no-files-found: error
+          retention-days: 90

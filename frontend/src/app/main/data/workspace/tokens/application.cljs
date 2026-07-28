@@ -25,7 +25,6 @@
    [app.main.data.style-dictionary :as sd]
    [app.main.data.tinycolor :as tinycolor]
    [app.main.data.tokenscript :as ts]
-   [app.main.data.workspace :as udw]
    [app.main.data.workspace.colors :as wdc]
    [app.main.data.workspace.shape-layout :as dwsl]
    [app.main.data.workspace.shapes :as dwsh]
@@ -95,11 +94,11 @@
      (watch [_ _ _]
        (when (number? value)
          (rx/of
-          (udw/trigger-bounding-box-cloaking shape-ids)
-          (udw/increase-rotation shape-ids value nil
-                                 {:page-id page-id
-                                  :ignore-touched true
-                                  :no-wasm? true})))))))
+          (dwtr/trigger-bounding-box-cloaking shape-ids)
+          (dwtr/increase-rotation shape-ids value nil
+                                  {:page-id page-id
+                                   :ignore-touched true
+                                   :no-wasm? true})))))))
 
 (defn update-stroke-width
   ([value shape-ids attributes] (update-stroke-width value shape-ids attributes nil))

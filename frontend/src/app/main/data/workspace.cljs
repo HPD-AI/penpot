@@ -48,6 +48,7 @@
    [app.main.data.workspace.groups :as dwg]
    [app.main.data.workspace.guides :as dwgu]
    [app.main.data.workspace.highlight :as dwh]
+   [app.main.data.workspace.hpd :as hpd]
    [app.main.data.workspace.interactions :as dwi]
    [app.main.data.workspace.layers :as dwly]
    [app.main.data.workspace.layout :as layout]
@@ -263,6 +264,10 @@
          ;; mcp initialization
          (->> (rx/from (preg/wait-for-runtime))
               (rx/map (fn [_] (mcp/init))))
+         (rx/empty))
+       (if (or (cf/hpd-client-tools-launch-attached?)
+               (some? cf/hpd-client-tools-uri))
+         (rx/of (hpd/init))
          (rx/empty))))))
 
 (defn- bundle-fetched
@@ -551,6 +556,7 @@
     (watch [_ state _]
       (let [project-id (:current-project-id state)]
         (rx/of (dwn/finalize file-id)
+               (hpd/finalize)
                (dpj/finalize-project project-id)
                (dwsl/finalize-shape-layout)
                (dwcl/stop-picker)

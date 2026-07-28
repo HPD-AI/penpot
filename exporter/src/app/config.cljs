@@ -9,6 +9,8 @@
   (:require
    ["node:buffer" :as buffer]
    ["node:crypto" :as crypto]
+   ["node:fs" :as node-fs]
+   ["node:path" :as node-path]
    ["node:process" :as process]
    [app.common.data :as d]
    [app.common.flags :as flags]
@@ -33,7 +35,9 @@
 (def ^:private schema:config
   [:map {:title "config"}
    [:secret-key :string]
+   [:secret-key-file {:optional true} :string]
    [:public-uri {:optional true} ::sm/uri]
+   [:public-uri-file {:optional true} :string]
    [:internal-uri {:optional true} ::sm/uri]
    [:exporter-shared-key {:optional true} :string]
    [:host {:optional true} :string]
@@ -72,11 +76,52 @@
             {}
             (js/Object.keys env))))
 
+(defn- read-config-file
+  [value hint max-size]
+  (when-not (.isAbsolute node-path value)
+    (throw (js/Error. hint)))
+  (let [stat (.lstatSync node-fs value)]
+    (when (or (not (.isFile stat))
+              (.isSymbolicLink stat)
+              (> (.-size stat) max-size))
+      (throw (js/Error. hint))))
+  (let [value (-> (.readFileSync node-fs value "utf8")
+                  (str/trim))]
+    (when (str/blank? value)
+      (throw (js/Error. hint)))
+    value))
+
+(defn- resolve-file-backed-config
+  [defaults env]
+  (when (and (:secret-key env) (:secret-key-file env))
+    (throw (js/Error.
+            "PENPOT_SECRET_KEY and PENPOT_SECRET_KEY_FILE cannot both be set")))
+  (when (and (:public-uri env) (:public-uri-file env))
+    (throw (js/Error.
+            "PENPOT_PUBLIC_URI and PENPOT_PUBLIC_URI_FILE cannot both be set")))
+  (cond-> (merge defaults env)
+    (:secret-key-file env)
+    (assoc :secret-key
+           (read-config-file
+            (:secret-key-file env)
+            "PENPOT_SECRET_KEY_FILE must name a small, absolute, regular, non-symlink file"
+            1024))
+    (:secret-key-file env)
+    (dissoc :secret-key-file)
+    (:public-uri-file env)
+    (assoc :public-uri
+           (read-config-file
+            (:public-uri-file env)
+            "PENPOT_PUBLIC_URI_FILE must name a small, absolute, regular, non-symlink file"
+            4096))
+    (:public-uri-file env)
+    (dissoc :public-uri-file)))
+
 (defn- prepare-config
   []
   (let [env  (read-env "penpot")
         env  (d/without-nils env)
-        data (merge defaults env)
+        data (resolve-file-backed-config defaults env)
         data (decode-config data)]
 
     (when-not (valid-config? data)
