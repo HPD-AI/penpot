@@ -6,8 +6,8 @@ not published to npm.
 
 | Package | Source | Source commit | Source-tree checksum |
 | --- | --- | --- | --- |
-| `@hpd-research/hpd-agent-client` | `typescript/hpd-agent-client/src` | `a41a46e4000f7015e4bd3eb9d4eb13eae0e2cd78` | `a085c5118f5b3397b753cc1edbd4434139c9540395f14960014bdbca32b7df61` |
-| `@hpd-research/hpd-agent-client-tools-typescript` | `typescript/hpd-agent-client-tools-typescript/src` | `a41a46e4000f7015e4bd3eb9d4eb13eae0e2cd78` | `a898ac1758d410df342ef1273a4c1a26bbccaed07d16a0403c8872ba1282cee4` |
+| `@hpd-research/hpd-agent-client` | `typescript/hpd-agent-client/src` | `a4537ba8259c80bc39ec4fb4242724e5ce1aee06` | `f87ec6eb967cbd1a66ccd2c9e8c9f42cf1e00a1507a77693bffd104a20bba443` |
+| `@hpd-research/hpd-agent-client-tools-typescript` | `typescript/hpd-agent-client-tools-typescript/src` | `a4537ba8259c80bc39ec4fb4242724e5ce1aee06` | `a898ac1758d410df342ef1273a4c1a26bbccaed07d16a0403c8872ba1282cee4` |
 
 The source repository is the HPD-AI-Framework repository vendored by HPD-OS.
 Each package carries the framework's `FSL-1.1-ALv2` license file.

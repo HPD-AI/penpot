@@ -48,6 +48,8 @@ frontend, backend, and exporter images. It records:
 - the workflow-run identity;
 - immutable multi-architecture manifest digests for the three Penpot images;
 - immutable PostgreSQL and Valkey dependency digests.
+- Linux/arm64 maximum transferred and expanded byte counts measured from the
+  immutable manifests and pulled images.
 
 The `.hpdapp` packaging job must consume that artifact. Mutable tags are build
 inputs only and must never appear in an accepted App manifest or production

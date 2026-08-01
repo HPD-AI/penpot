@@ -66,7 +66,10 @@ jobs:
           test -n "${bundle_version}"
           printf 'BUNDLE_VERSION=%s\n' "${bundle_version}" >> "$GITHUB_ENV"
 
-      - name: Record immutable HPDOS image provenance
+      - name: Verify HPDOS provenance generator
+        run: node docker/images/create-hpdos-image-provenance.test.mjs
+
+      - name: Record immutable HPDOS image provenance and storage bounds
         env:
           REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
           IMAGE_TAG: ${{ inputs.gh_ref }}
@@ -76,15 +79,12 @@ jobs:
           set -euo pipefail
           mkdir -p hpdos-artifacts
           for image in frontend backend exporter; do
-            reference="${REGISTRY}/${image}:${IMAGE_TAG}"
-            digest="sha256:$(docker buildx imagetools inspect --raw "${reference}" | sha256sum | cut -d' ' -f1)"
-            printf '%s=%s@%s\n' "${image}" "${REGISTRY}/${image}" "${digest}" >> hpdos-artifacts/images.env
+            printf '%s=%s\n' "${image}" "${REGISTRY}/${image}:${IMAGE_TAG}" >> hpdos-artifacts/images.env
           done
           for image in "postgres=postgres:15" "valkey=valkey/valkey:8.1"; do
             name="${image%%=*}"
             reference="${image#*=}"
-            digest="sha256:$(docker buildx imagetools inspect --raw "${reference}" | sha256sum | cut -d' ' -f1)"
-            printf '%s=%s@%s\n' "${name}" "${reference%%:*}" "${digest}" >> hpdos-artifacts/images.env
+            printf '%s=%s\n' "${name}" "${reference}" >> hpdos-artifacts/images.env
           done
           node docker/images/create-hpdos-image-provenance.mjs \
             hpdos-artifacts/images.env \
